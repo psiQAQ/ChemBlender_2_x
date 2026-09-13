@@ -1,0 +1,53 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T00",
+  "title": "安装、诊断与处理器故障恢复",
+  "required_steps": [
+    {
+      "id": "s01",
+      "description": "通过 Blender Extensions 安装并启用冻结的当前 Extension ZIP",
+      "requires_gui": true
+    },
+    {
+      "id": "s02",
+      "description": "配置现有 chemblender-prepare.exe 并执行 Test Processor",
+      "requires_gui": true
+    },
+    {
+      "id": "s03",
+      "description": "运行当前 CLI doctor 与 capabilities 并核对 Standard 能力",
+      "requires_gui": false
+    },
+    {
+      "id": "s04",
+      "description": "在 Blender 中设置不存在的 processor 路径，观察失败，恢复有效路径并再次 Test Processor",
+      "requires_gui": true
+    },
+    {
+      "id": "s05",
+      "description": "核对中英安装、工作流和故障恢复教程入口及离线页面",
+      "requires_gui": false
+    }
+  ],
+  "required_checks": [
+    "extension_identity",
+    "enabled_module",
+    "cli_doctor_and_capabilities",
+    "processor_protocol_and_standard",
+    "invalid_processor_path_rejected",
+    "processor_path_restored",
+    "viewer_dependency_boundary",
+    "tutorial_entrypoints"
+  ],
+  "required_artifact_kinds": [
+    "environment",
+    "gui_raw",
+    "events",
+    "assertions",
+    "review"
+  ],
+  "requires_independent_review": true,
+  "render_and_project_pair": "not_applicable_installation_and_diagnostics_case",
+  "note": "Frozen before the current direct-GUI failure/recovery execution. Historical install/Test Processor GUI may be reused only through a valid execution supplement; current MCP failure recovery is not direct GUI evidence."
+}

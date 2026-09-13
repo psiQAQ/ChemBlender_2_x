@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 5 — 逐个实施 P1/P2 案例；Phase 6 独立人工复做门槛并行保留
-- Next Step: P4.12 冻结缺失的 T00 case spec，并用真实当前安装、doctor/Test Processor 与恢复证据建立 conforming manifest；不得把 audit-complete 写成 technical-complete
+- Next Step: P4.12 录制 T00 当前直接 GUI 的无效 processor 路径失败与恢复重试，再建立 execution supplement 和 conforming manifest
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。

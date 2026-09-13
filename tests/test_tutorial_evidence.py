@@ -888,6 +888,14 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(p0['T02']['technical_status'], 'passed')
         self.assertEqual(p0['T06']['verdict'], 'invalid')
 
+    def test_t00_spec_keeps_failure_recovery_as_direct_gui(self):
+        spec = json.loads((ROOT / 'examples/tutorials/2.5.0/T00.case-spec.json').read_text(encoding='utf-8'))
+        steps = {item['id']: item for item in spec['required_steps']}
+        self.assertTrue(steps['s04']['requires_gui'])
+        self.assertIn('invalid_processor_path_rejected', spec['required_checks'])
+        self.assertIn('processor_path_restored', spec['required_checks'])
+        self.assertEqual(spec['render_and_project_pair'], 'not_applicable_installation_and_diagnostics_case')
+
     def test_t18_current_audit_preserves_gui_and_native_boundaries(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         receipt = json.loads((base / 'T18-current-candidate-check.json').read_text(encoding='utf-8'))
