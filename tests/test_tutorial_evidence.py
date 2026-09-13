@@ -481,13 +481,30 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['direct_gui'], 'not_run')
         self.assertEqual(case['human_review'], 'not_run')
 
-    def test_t11_t14_scientific_route_stays_development_only(self):
+    def test_t11_current_vibration_science_preserves_missing_fields(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T11')
+        receipt = json.loads((base / 'T11-current-candidate-check.json').read_text(encoding='utf-8'))
+        spec = json.loads((base / 'T11.case-spec.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_prepare_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['inputs'], [{key: item[key] for key in ('path', 'sha256', 'bytes')} for item in spec['inputs']])
+        self.assertIn('54 finite modes', receipt['verified']['common'])
+        self.assertIn('Raman absent', receipt['verified']['gaussian_ir'])
+        self.assertIn('reduced masses and force constants absent', receipt['verified']['orca_ir'])
+        self.assertIn('not synthesized', receipt['verified']['missing_fields'])
+        self.assertEqual(receipt['verified']['cbq_validation'], 'passed_all_four')
+        self.assertEqual(case['technical_status'], 'incomplete')
+        self.assertEqual(case['scientific_processing'], 'passed')
+        self.assertEqual(case['direct_gui'], 'not_run')
+        self.assertEqual(case['human_review'], 'not_run')
+
+    def test_t12_t14_historical_scientific_route_blocker_does_not_claim_processing(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         receipt = json.loads((base / 'T11-T14-scientific-route-blocker.json').read_text(encoding='utf-8'))
         self.assertEqual(receipt['route']['qualification'], 'development_reuse')
         self.assertEqual(len(receipt['route']['cross_environment_paths']), 2)
         cases = {item['case_id']: item for item in self.status['cases']}
-        for case_id in receipt['case_ids']:
+        for case_id in ('T12', 'T13', 'T14'):
             case = cases[case_id]
             self.assertEqual(case['status'], 'blocked')
             self.assertEqual(case['technical_status'], 'not_run')

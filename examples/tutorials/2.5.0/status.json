@@ -329,10 +329,11 @@
       "case_id": "T11",
       "priority": "P1",
       "status": "blocked",
-      "status_reason": "Gaussian/ORCA inputs are frozen, but the current scientific route is development_reuse through cross-environment .pth; dependency authorization is required before isolated execution.",
-      "candidate_scope": "current_candidate_environment_only",
-      "technical_status": "not_run",
-      "scientific_processing": "not_run",
+      "status_reason": "Current isolated Gaussian/ORCA vibration parsing, IR/Raman field boundaries and animation phase math passed; direct GUI, spectrum/animation render, lifecycle/recovery, tutorial/review package, manifest and human review remain open.",
+      "run": "run-012/T11",
+      "candidate_scope": "current_isolated_prepare_and_scientific_route",
+      "technical_status": "incomplete",
+      "scientific_processing": "passed",
       "direct_gui": "not_run",
       "authorized_replay": "not_run",
       "render": "not_run",
@@ -341,7 +342,7 @@
       "review_package": "not_run",
       "human_review": "not_run",
       "distribution": "blocked",
-      "evidence_refs": ["examples/tutorials/2.5.0/T11.case-spec.json", "examples/tutorials/2.5.0/T11-T14-scientific-route-blocker.json"]
+      "evidence_refs": ["examples/tutorials/2.5.0/T11.case-spec.json", "examples/tutorials/2.5.0/T11-T14-scientific-route-blocker.json", "examples/tutorials/2.5.0/T11-current-candidate-check.json", "examples/tutorials/2.5.0/environment-qualification.json"]
     },
     {
       "case_id": "T12",

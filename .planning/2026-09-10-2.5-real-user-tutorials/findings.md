@@ -208,6 +208,11 @@
 - Water density and ESP are bound to the same Structure, BasisSet and SCF total DensityMatrix and share an exact `66^3` affine grid; density remains `electron_per_cubic_bohr` and ESP remains `hartree_per_elementary_charge`.
 - The `0.045–0.055` density surface band contains 1,686 sampled voxels with ESP spanning `-0.1184` to `0.3913`. A grid point inside the explicit 0.05-bohr nuclear exclusion radius is rejected with no output, so near-nuclear singularity handling remains visible rather than silently clipped.
 
+## T11 current vibration science
+
+- All four fixed Gaussian/ORCA files contain 54 finite modes for 20 atoms with `54x20x3` angstrom displacements and no imaginary mode. Gaussian exposes reduced masses/force constants; these are absent in the ORCA fixtures and remain absent.
+- IR-only fixtures retain no Raman activity, while Raman fixtures retain both fields. Selected-mode `+/-0.5` endpoints average back to source coordinates within floating-point tolerance; this validates phase math but does not substitute for Blender animation evidence.
+
 ## B01 provider boundary
 
 - Current capabilities advertises `external_record.fetch@1` as `available=false` with `no live provider transport configured`. A valid credential-free QCArchive provider request reaches the reviewed worker contract and fails `dependency_missing` without output or a network request.

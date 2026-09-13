@@ -1,0 +1,52 @@
+{
+  "case_id": "T11",
+  "status": "blocked",
+  "scope": "Current isolated scientific route parses fixed Gaussian/ORCA vibration evidence; spectrum Views, animation, lifecycle, tutorial and review remain separate.",
+  "candidate": {
+    "source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+    "environment_qualification": "isolated_install",
+    "route": "python.scientific",
+    "cclib_version": "1.8.1"
+  },
+  "inputs": [
+    {"path": "examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian16/dvb_ir.out", "sha256": "bc1a21de15ada135d5188b11d44226389022d92488ddfa8163ba7d4d713e5061", "bytes": 185543},
+    {"path": "examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian16/dvb_raman.out", "sha256": "fc97b8c179dbad721262be6077be893b13b785b36f8ae3493a1dd4b3d4bf18b9", "bytes": 148126},
+    {"path": "examples/scientific-visualization/inputs/cclib/ORCA/basicORCA5.0/dvb_ir.out", "sha256": "deb64567281a4673849812a63fc7b1147c33d1c4ad3b67f6b3bf7ec03ab1046c", "bytes": 122846},
+    {"path": "examples/scientific-visualization/inputs/cclib/ORCA/basicORCA5.0/dvb_raman.out", "sha256": "956e9a7989c8fc917ef358f57423286d7228f59fff18f159e25c19e71e3181e8", "bytes": 132927}
+  ],
+  "verified": {
+    "common": "all four contain 54 finite modes, 20 atoms, 54x20x3 angstrom displacements, inverse-centimeter frequencies, cclib_cartesian convention and no imaginary mode",
+    "gaussian_ir": "first 53.1981 cm^-1; IR present, Raman absent, reduced masses and force constants present; strongest IR mode index 44 at 3396.4292 cm^-1 and 98.3271 km/mol",
+    "gaussian_raman": "first 53.1117 cm^-1; IR and Raman present, reduced masses and force constants present; strongest Raman mode index 41 at 1740.0595 cm^-1 and 1064.0059 angstrom^4/dalton",
+    "orca_ir": "first 45.66 cm^-1; IR present, Raman absent, reduced masses and force constants absent; strongest IR mode index 44 at 3393.77 cm^-1 and 96.88 km/mol",
+    "orca_raman": "first 77.7 cm^-1; IR and Raman present, reduced masses and force constants absent; strongest Raman mode index 41 at 1737.78 cm^-1 and 1037.104624 angstrom^4/dalton",
+    "missing_fields": "absent Raman activities, ORCA reduced masses/force constants and ORCA symmetry labels remain absent and are not synthesized",
+    "animation_phase_math": "for each selected mode, +/-0.5 displacement endpoints average back to the source coordinates within 2.23e-16 angstrom",
+    "cbq_validation": "passed_all_four"
+  },
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-012/T11",
+    "manifest_sha256": {
+      "gaussian_ir": "78ee3d6f9cf7117e300d1f7cc538a896c5aeecf716394e751ec5e5667acd8133",
+      "gaussian_raman": "30c9bdc37cba471290e5df20b20daa28b43f62de5c062fbbe425a8b2afd3230e",
+      "orca_ir": "5b6e1c0402a74f4f4288e2c005081878ad407ff0ff7ee370728ef5d927963714",
+      "orca_raman": "daf3351fbcdd793b80962bf07f1e859771eb464457be58c0457fb53911555495"
+    },
+    "convert_result_sha256": {
+      "gaussian_ir": "278ac7bd09a7ad8f46227d03549b2b4642fe4c4893cebdc322e0f583a35371c3",
+      "gaussian_raman": "9be883dba364d2c4bb041e0126b8dc1cb53398a6497afde5f7cc0284176e6fc8",
+      "orca_ir": "e1c4f2f9ec013d284bc90f5fbe74c5e55ead9e9d0e09830967f175ce1953faf2",
+      "orca_raman": "22873cdf6da6013cd8aa9e1af421c4867436d44a393721db13cb5c63f1ad7635"
+    }
+  },
+  "blocked": {
+    "prepare_gui": "No current direct-GUI operation was performed.",
+    "spectrum_and_animation": "IR/Raman spectrum Views and selected-mode Blender animation are not run.",
+    "render_project_pair_cold_reopen_recovery": "Not run.",
+    "tutorial_offline_qa_review_package": "Not run.",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}
